@@ -1,0 +1,20 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Attractor {
+  public Vector3 position;
+  public List<Node> isInfluencing;
+  public bool isFresh;
+  public bool isReached;
+  public int age;
+
+  public Attractor(Vector3 _position) {
+    position = _position;
+
+    isInfluencing = new List<Node>();
+    isFresh = true;
+    isReached = false;
+    age = -1;
+  }
+}
