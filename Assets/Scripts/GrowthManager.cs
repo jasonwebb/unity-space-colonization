@@ -464,13 +464,6 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Update() {
-    // Load scenes based on number key presses
-    if(Input.GetKeyUp("1")) { SceneManager.LoadScene(0); }
-    if(Input.GetKeyUp("2")) { SceneManager.LoadScene(1); }
-    if(Input.GetKeyUp("3")) { SceneManager.LoadScene(2); }
-    if(Input.GetKeyUp("4")) { SceneManager.LoadScene(3); }
-    if(Input.GetKeyUp("5")) { SceneManager.LoadScene(4); }
-
     // Automatically pause when max iterations reached (if enabled)
     if(EnableMaxIterations && _numIterations > MaxIterations) {
       isPaused = true;
