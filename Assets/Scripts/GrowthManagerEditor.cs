@@ -43,12 +43,9 @@ public class GrowthManagerEditor : Editor {
 
   // Obstacles
   SerializedProperty enableObstaclesProp;
-  private List<GameObject> obstacles;
+  SerializedProperty obstacleMeshListProp;
 
   public void OnEnable() {
-    obstacles = new List<GameObject>();
-    obstacles.Add(new GameObject());
-
     attractionDistanceProp = serializedObject.FindProperty("AttractionDistance");
     killDistanceProp = serializedObject.FindProperty("KillDistance");
     segmentLengthProp = serializedObject.FindProperty("SegmentLength");
@@ -80,6 +77,7 @@ public class GrowthManagerEditor : Editor {
     boundsMeshProp = serializedObject.FindProperty("BoundingMesh");
 
     enableObstaclesProp = serializedObject.FindProperty("EnableObstacles");
+    obstacleMeshListProp = serializedObject.FindProperty("Obstacles");
   }
 
   public override void OnInspectorGUI() {
@@ -245,25 +243,9 @@ public class GrowthManagerEditor : Editor {
       enableObstaclesProp.boolValue = EditorGUILayout.Toggle("Use obstacles", enableObstaclesProp.boolValue);
 
       using(new EditorGUI.DisabledScope(enableObstaclesProp.boolValue == false)) {
-        // obstacles[0] = (GameObject)EditorGUILayout.ObjectField(" ", null, typeof(GameObject), true);
-
-        // for(int i=1; i<manager.Obstacles.Count; i++) {
-        //   EditorGUILayout.PrefixLabel(" ");
-        //   manager.Obstacles[i] = (GameObject)EditorGUILayout.ObjectField("", manager.Obstacles[i], typeof(GameObject), true);
-        // }
-
-        EditorGUILayout.BeginHorizontal();
-          EditorGUILayout.PrefixLabel(" ");
-
-          if(GUILayout.Button("+", GUILayout.ExpandWidth(false))) {
-            // manager.ExportOBJ();
-          }
-
-          if(GUILayout.Button("-", GUILayout.ExpandWidth(false))) {
-            // manager.ExportOBJ();
-          }
-
-        EditorGUILayout.EndHorizontal();
+        EditorGUI.indentLevel++;
+          EditorGUILayout.PropertyField(obstacleMeshListProp, new GUIContent("Obstacle meshes"), true);
+        EditorGUI.indentLevel--;
       }
 
     EditorGUI.indentLevel--;
