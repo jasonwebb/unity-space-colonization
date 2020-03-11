@@ -8,56 +8,76 @@ using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  public Material material;
-  public Transform InputRootNode;
-
+  //========================================================
+  //  Configurable parameters
+  //========================================================
+  // Algorithm parameters
   public float AttractionDistance;
   public float KillDistance;
   public float SegmentLength;
-  public int MaxAttractorAge;
-  public bool EnableAttractorAging;
 
+  // Branch rendering parameters
+  public Material BranchMaterial;
+  public bool EnableCanalization;
   public float MinimumRadius;
   public float MaximumRadius;
   public float RadiusIncrement;
-  public bool EnableCanalization;
+  public float ConstantRadius;
 
-  public float MaxIterations;
-  private int _numIterations;
-  public bool EnableMaxIterations;
+  // Attractors type parameters
+  public enum AttractorsType {MESH, GRID, SPHERE};
+  public AttractorsType attractorsType;
 
+    // GRID
+    public Vector3 GridDimensions;
+    public Vector3Int GridResolution;
+    public float GridJitterAmount;
+
+    // SPHERE
+    public float AttractorSphereRadius;
+    public int AttractorSphereCount;
+
+    // MESH
+    public GameObject TargetMesh;
+
+  // Attractor generation parameters
   public int AttractorRaycastAttempts;
   public float AttractorSurfaceOffset;
   public float AttractorGizmoRadius;
 
-  public float AttractorSphereRadius;
-  public int AttractorSphereCount;
-
-  public float GridWidth;
-  public float GridHeight;
-  public float GridDepth;
-  public int GridXResolution;
-  public int GridYResolution;
-  public int GridZResolution;
-  public float GridJitterAmount;
-
-  public enum AttractorsType {NONE, MESH, GRID, SPHERE};
-  public AttractorsType attractorsType;
-
   public enum AttractorRaycastingType {OUTWARDS, INWARDS, DOME};
   public AttractorRaycastingType attractorRaycastingType;
 
-  public enum RootNodeType {INPUT, ORIGIN, MESH_SINGLE, MESH_THREE};
+  // Attractor age parameters
+  public int MaxAttractorAge;
+  public bool EnableAttractorAging;
+
+  // Root node(s) parameters
+  public enum RootNodeType {INPUT, MESH};
   public RootNodeType rootNodeType;
 
-  // Bounds and obstacles
-  private GameObject _bounds;
-  private bool boundsEnabled;
-  private List<GameObject> _obstacles;
+  public Transform InputRootNode;
+  public int NumRootNodes;
+
+  // Bounds parameters
+  public GameObject BoundingMesh;
+  public bool EnableBounds;
+
+  // Obstacles parameters
+  public bool EnableObstacles;
+  public List<GameObject> Obstacles;
   private RaycastHit[] hits;  // results of raycast hit-tests against bounds and obstacles
 
   public bool isPaused = false;
 
+  public bool EnableMaxIterations;
+  public float MaxIterations;
+  private int _numIterations;
+
+
+  //========================================================
+  //  Internal variables
+  //========================================================
   // Attractors
   private List<Attractor> _attractors = new List<Attractor>();
   private List<Attractor> _attractorsToRemove = new List<Attractor>();
@@ -68,8 +88,8 @@ public class GrowthManager : MonoBehaviour {
   private List<int> _nodesInAttractionZone = new List<int>();
   private List<Node> _nodesToAdd = new List<Node>();
 
-  private KDTree _nodeTree;               // spatial index of vein nodes
-  private KDQuery query = new KDQuery();  // query object for spatial indices
+  private KDTree _nodeTree;                // spatial index of vein nodes
+  private KDQuery _query = new KDQuery();  // query object for spatial indices
 
   // Branch meshes and data
   private List<List<Vector3>> _branches = new List<List<Vector3>>();
@@ -86,6 +106,7 @@ public class GrowthManager : MonoBehaviour {
   private GameObject veinsObject;
   private MeshFilter filter;
 
+
   /*
   =================================
     RESET
@@ -97,38 +118,39 @@ public class GrowthManager : MonoBehaviour {
     AttractionDistance = .3f;
     KillDistance = .05f;
     SegmentLength = .04f;
+
     MaxAttractorAge = 10;
     EnableAttractorAging = false;
 
+    EnableCanalization = true;
     MinimumRadius = .003f;
     MaximumRadius = .03f;
     RadiusIncrement = .00005f;
-    EnableCanalization = true;
+    ConstantRadius = .01f;
 
-    MaxIterations = 10;
-    _numIterations = 0;
-    EnableMaxIterations = false;
+    attractorsType = AttractorsType.MESH;
 
-    AttractorRaycastAttempts = 200000;
-    AttractorSurfaceOffset = .01f;
-    AttractorGizmoRadius = .05f;
+    GridDimensions = new Vector3(20f,20f,20f);
+    GridResolution = new Vector3Int(5,5,5);
+    GridJitterAmount = 1f;
 
     AttractorSphereRadius = 1f;
     AttractorSphereCount = 5000;
 
-    GridWidth = 20f;
-    GridHeight = 20f;
-    GridDepth = 20f;
-    GridXResolution = 5;
-    GridYResolution = 5;
-    GridZResolution = 5;
-    GridJitterAmount = 1f;
-
-    attractorsType = AttractorsType.MESH;
+    AttractorRaycastAttempts = 200000;
     attractorRaycastingType = AttractorRaycastingType.INWARDS;
-    rootNodeType = RootNodeType.MESH_SINGLE;
+    AttractorSurfaceOffset = .01f;
+    AttractorGizmoRadius = .05f;
 
-    InputRootNode = GameObject.Find("Root node").transform;
+    rootNodeType = RootNodeType.MESH;
+    NumRootNodes = 1;
+
+    EnableBounds = true;
+    EnableObstacles = true;
+
+    MaxIterations = 10;
+    _numIterations = 0;
+    EnableMaxIterations = false;
   }
 
 
@@ -138,36 +160,11 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Start() {
-    SetupBounds();        // retrieve any active bounds objects
-    SetupObstacles();     // retrieve any active obstacle objects
-
     SetupMeshes();        // create child GameObjects for veins and TubeRenderer
     CreateAttractors();   // generate attractors based on mode
     CreateRootVeins();    // generate root vein nodes
     BuildSpatialIndex();  // initialize the node spatial index
   }
-
-
-    /*
-    ========================
-      BOUNDS
-    ========================
-    */
-    void SetupBounds() {
-      _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
-      boundsEnabled = _bounds == null ? false : true;
-    }
-
-
-    /*
-    ========================
-      OBSTACLES
-    ========================
-    */
-    void SetupObstacles() {
-      _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
-    }
-
 
     /*
     ========================
@@ -190,7 +187,7 @@ public class GrowthManager : MonoBehaviour {
       filter = veinsObject.AddComponent<MeshFilter>();
       filter.sharedMesh = new Mesh();
       filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-      veinsObject.GetComponent<Renderer>().material = material;
+      veinsObject.GetComponent<Renderer>().material = BranchMaterial;
 
       // Set up the tube renderer
       tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
@@ -211,9 +208,6 @@ public class GrowthManager : MonoBehaviour {
       _attractors.Clear();
 
       switch(attractorsType) {
-        case AttractorsType.NONE:
-          break;
-
         // Create attractors on target mesh(es) using raycasting ------------------------------------
         case AttractorsType.MESH:
           CreateAttractorsOnMeshSurface();
@@ -221,15 +215,15 @@ public class GrowthManager : MonoBehaviour {
 
         // Points in a 3D grid ----------------------------------------------------------------------
         case AttractorsType.GRID:
-          for(int x = 0; x <= GridXResolution; x++) {
-            for(int y = 0; y <= GridYResolution; y++) {
-              for(int z = 0; z <= GridZResolution; z++) {
+          for(int x = 0; x <= GridResolution.x; x++) {
+            for(int y = 0; y <= GridResolution.y; y++) {
+              for(int z = 0; z <= GridResolution.z; z++) {
                 _attractors.Add(
                   new Attractor(
                     new Vector3(
-                      x * (GridWidth/GridXResolution) - GridWidth/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
-                      y * (GridHeight/GridYResolution) - GridHeight/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
-                      z * (GridDepth/GridZResolution) - GridDepth/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
+                      x * (GridDimensions.x/GridResolution.x) - GridDimensions.x/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                      y * (GridDimensions.y/GridResolution.y) - GridDimensions.y/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                      z * (GridDimensions.z/GridResolution.z) - GridDimensions.z/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
                     )
                   )
                 );
@@ -342,112 +336,42 @@ public class GrowthManager : MonoBehaviour {
 
           break;
 
-        // Root node at origin --------------------------------------------------------------------
-        case RootNodeType.ORIGIN:
-          _rootNodes.Add(
-            new Node(
-              Vector3.zero,
-              null,
-              true,
-              MinimumRadius
-            )
-          );
-
-          break;
-
         // Random point(s) on mesh ----------------------------------------------------------------
-        case RootNodeType.MESH_SINGLE:
-        case RootNodeType.MESH_THREE:
-          int numRoots = -1;
+        case RootNodeType.MESH:
+          if(TargetMesh != null) {
+            bool isHit = false;
+            RaycastHit hitInfo;
 
-          if(rootNodeType == RootNodeType.MESH_SINGLE) { numRoots = 1; }
-          else if(rootNodeType == RootNodeType.MESH_THREE) { numRoots = 3; }
+            for(int i=0; i<NumRootNodes; i++) {
+              do {
+                Vector3 startingPoint = UnityEngine.Random.onUnitSphere * 5;
+                Vector3 targetPoint = UnityEngine.Random.onUnitSphere * .5f;
 
-          bool isHit = false;
-          RaycastHit hitInfo;
-
-          for(int i=0; i<numRoots; i++) {
-            do {
-              Vector3 startingPoint = UnityEngine.Random.onUnitSphere * 5;
-              Vector3 targetPoint = UnityEngine.Random.onUnitSphere * .5f;
-
-              isHit = Physics.Raycast(
-                startingPoint,
-                targetPoint,
-                out hitInfo,
-                Mathf.Infinity,
-                LayerMask.GetMask("Targets"),
-                QueryTriggerInteraction.Ignore
-              );
-
-              if(isHit) {
-                _rootNodes.Add(
-                  new Node(
-                    hitInfo.point,
-                    null,
-                    true,
-                    MinimumRadius
-                  )
+                isHit = Physics.Raycast(
+                  startingPoint,
+                  targetPoint,
+                  out hitInfo,
+                  Mathf.Infinity,
+                  LayerMask.GetMask("Targets"),
+                  QueryTriggerInteraction.Ignore
                 );
-              }
-            } while(!isHit);
+
+                if(isHit) {
+                  _rootNodes.Add(
+                    new Node(
+                      hitInfo.point,
+                      null,
+                      true,
+                      MinimumRadius
+                    )
+                  );
+                }
+              } while(!isHit);
+            }
           }
 
           break;
       }
-
-      // ROCKS --------------------------------------------------
-      // _rootNodes.Add(
-      //   new Node(
-      //     new Vector3(.7f,0f,0f),
-      //     null,
-      //     true,
-      //     MinimumRadius
-      //   )
-      // );
-
-      // HEAD ---------------------------------------------------
-      // On surface
-      // _rootNodes.Add(
-      //   new Node(
-      //     // new Vector3(0f,.4f,0f), // top of skull
-      //     new Vector3(-.4f, -1f, -.2f), // cheek
-      //     null,
-      //     true,
-      //     MinimumRadius
-      //   )
-      // );
-
-      // Inside
-      // _rootNodes.Add(
-      //   new Node(
-      //     new Vector3(-1.33f,0f,0f),
-      //     null,
-      //     true,
-      //     MinimumRadius
-      //   )
-      // );
-
-      // _rootNodes.Add(
-      //   new Node(
-      //     new Vector3(1.33f,0f,0f),
-      //     null,
-      //     true,
-      //     MinimumRadius
-      //   )
-      // );
-
-      // SPHERE ----------------------------------------------
-      // for(int i=0; i<3; i++) {
-      //   _rootNodes.Add(
-      //     new Node(
-      //       Random.insideUnitSphere,
-      //       null,
-      //       true,
-      //       MinimumRadius
-      //     )
-      //   );
-      // }
 
       // Add root nodes to node tree
       foreach(Node rootNode in _rootNodes) {
@@ -511,7 +435,7 @@ public class GrowthManager : MonoBehaviour {
         _nodesInAttractionZone.Clear();
 
         // a. Open venation = closest vein node only ---------------------------------------------------------------------
-        query.ClosestPoint(_nodeTree, attractor.position, _nodesInAttractionZone);
+        _query.ClosestPoint(_nodeTree, attractor.position, _nodesInAttractionZone);
 
         // ii. If a vein node is found, associate it by pushing attractor ID to _nodeInfluencedBy
         if(_nodesInAttractionZone.Count > 0) {
@@ -553,14 +477,14 @@ public class GrowthManager : MonoBehaviour {
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
           // Bounds check --------------------------------------------------------------------------------------------------
-          bool isInsideBounds = boundsEnabled ? false : true;
+          bool isInsideBounds = EnableBounds ? false : true;
 
-          if(boundsEnabled) {
+          if(EnableBounds) {
             // Cast a ray from the new node's position to the center of the bounds mesh
             hits = Physics.RaycastAll(
               newNodePosition,  // starting point
-              (_bounds.transform.position - newNodePosition).normalized,  // direction
-              (int)Mathf.Round(Vector3.Distance(newNodePosition, _bounds.transform.position)),  // maximum distance
+              (BoundingMesh.transform.position - newNodePosition).normalized,  // direction
+              (int)Mathf.Round(Vector3.Distance(newNodePosition, BoundingMesh.transform.position)),  // maximum distance
               LayerMask.GetMask("Bounds") // layer containing colliders
             );
 
@@ -573,7 +497,7 @@ public class GrowthManager : MonoBehaviour {
           // Obstacles check -----------------------------------------------------------------------------------------------
           bool isInsideAnyObstacles = false;
 
-          foreach(GameObject obstacle in _obstacles) {
+          foreach(GameObject obstacle in Obstacles) {
             if(obstacle.activeInHierarchy) {
               // Cast a ray from the new node's position to the center of this obstacle mesh
               hits = Physics.RaycastAll(
@@ -920,16 +844,6 @@ public class GrowthManager : MonoBehaviour {
     return averageDirection;
   }
 
-  private List<GameObject> GetAllChildren(GameObject parentObject) {
-    List<GameObject> children = new List<GameObject>();
-
-    for(int i=0; i<parentObject.transform.childCount; i++) {
-      children.Add(parentObject.transform.GetChild(i).gameObject);
-    }
-
-    return children;
-  }
-
   public void GrowInEditor() {
     for(int i=0; i<50; i++) {
       Update();
@@ -962,9 +876,6 @@ public class GrowthManager : MonoBehaviour {
     // Setup meshes
     SetupMeshes();
     CreateMeshes();
-
-    SetupBounds();
-    SetupObstacles();
   }
 
   /*
