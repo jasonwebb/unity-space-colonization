@@ -25,7 +25,7 @@ public class GrowthManager : MonoBehaviour {
   public float ConstantRadius;
 
   // Attractors type parameters
-  public enum AttractorsType {MESH, GRID, SPHERE};
+  public enum AttractorsType {SPHERE, GRID, MESH};
   public AttractorsType attractorsType;
 
     // GRID
@@ -45,7 +45,7 @@ public class GrowthManager : MonoBehaviour {
   public float AttractorSurfaceOffset;
   public float AttractorGizmoRadius;
 
-  public enum AttractorRaycastingType {OUTWARDS, INWARDS, DOME};
+  public enum AttractorRaycastingType {INWARDS, OUTWARDS, DOME};
   public AttractorRaycastingType attractorRaycastingType;
 
   // Attractor age parameters
@@ -65,14 +65,16 @@ public class GrowthManager : MonoBehaviour {
 
   // Obstacles parameters
   public bool EnableObstacles;
-  public List<GameObject> Obstacles;
+  public List<GameObject> Obstacles = new List<GameObject>();
   private RaycastHit[] hits;  // results of raycast hit-tests against bounds and obstacles
 
   public bool isPaused = false;
+  public bool isSetUp = false;
 
   public bool EnableMaxIterations;
   public float MaxIterations;
   private int _numIterations;
+  public int IterationsToRun;
 
 
   //========================================================
@@ -102,9 +104,9 @@ public class GrowthManager : MonoBehaviour {
   private List<CombineInstance> _patchMeshes = new List<CombineInstance>();
 
   // Tube renderer and output mesh
-  private TubeRenderer tube;
-  private GameObject veinsObject;
-  private MeshFilter filter;
+  private TubeRenderer _tube;
+  private GameObject _veinsMesh;
+  private MeshFilter _filter;
 
 
   /*
@@ -115,17 +117,17 @@ public class GrowthManager : MonoBehaviour {
   =================================
   */
   void Reset() {
-    AttractionDistance = .3f;
-    KillDistance = .05f;
-    SegmentLength = .04f;
+    AttractionDistance = 10f;
+    KillDistance = .5f;
+    SegmentLength = .5f;
 
     MaxAttractorAge = 10;
     EnableAttractorAging = false;
 
     EnableCanalization = true;
-    MinimumRadius = .003f;
-    MaximumRadius = .03f;
-    RadiusIncrement = .00005f;
+    MinimumRadius = .005f;
+    MaximumRadius = .15f;
+    RadiusIncrement = .001f;
     ConstantRadius = .01f;
 
     attractorsType = AttractorsType.MESH;
@@ -143,14 +145,17 @@ public class GrowthManager : MonoBehaviour {
     AttractorGizmoRadius = .05f;
 
     rootNodeType = RootNodeType.MESH;
-    NumRootNodes = 1;
+    NumRootNodes = 3;
 
-    EnableBounds = true;
-    EnableObstacles = true;
+    EnableBounds = false;
+    EnableObstacles = false;
 
+    Obstacles = new List<GameObject>();
+
+    EnableMaxIterations = false;
     MaxIterations = 10;
     _numIterations = 0;
-    EnableMaxIterations = false;
+    IterationsToRun = 10;
   }
 
 
@@ -160,10 +165,7 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Start() {
-    SetupMeshes();        // create child GameObjects for veins and TubeRenderer
-    CreateAttractors();   // generate attractors based on mode
-    CreateRootVeins();    // generate root vein nodes
-    BuildSpatialIndex();  // initialize the node spatial index
+    ResetScene();
   }
 
     /*
@@ -180,18 +182,18 @@ public class GrowthManager : MonoBehaviour {
       }
 
       // Set up a separate GameObject to render the veins to
-      veinsObject = new GameObject("Veins");
-      veinsObject.transform.SetParent(gameObject.transform);
-      veinsObject.AddComponent<MeshRenderer>();
+      _veinsMesh = new GameObject("Veins");
+      _veinsMesh.transform.SetParent(gameObject.transform);
+      _veinsMesh.AddComponent<MeshRenderer>();
 
-      filter = veinsObject.AddComponent<MeshFilter>();
-      filter.sharedMesh = new Mesh();
-      filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-      veinsObject.GetComponent<Renderer>().material = BranchMaterial;
+      _filter = _veinsMesh.AddComponent<MeshFilter>();
+      _filter.sharedMesh = new Mesh();
+      _filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+      _veinsMesh.GetComponent<Renderer>().material = BranchMaterial;
 
       // Set up the tube renderer
-      tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
-      tube.transform.SetParent(gameObject.transform);
+      _tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
+      _tube.transform.SetParent(gameObject.transform);
 
       Profiler.EndSample();
     }
@@ -202,7 +204,7 @@ public class GrowthManager : MonoBehaviour {
       ATTRACTORS
     ========================
     */
-    void CreateAttractors() {
+    public void CreateAttractors() {
       Profiler.BeginSample("CreateAttractors");
 
       _attractors.Clear();
@@ -248,64 +250,72 @@ public class GrowthManager : MonoBehaviour {
       public void CreateAttractorsOnMeshSurface() {
         Profiler.BeginSample("CreateAttractorsOnMeshSurface");
 
-        int hitCount = 0;
+        if(TargetMesh != null) {
+          int hitCount = 0;
 
-        for(int i=0; i<AttractorRaycastAttempts; i++) {
-          RaycastHit hitInfo;
+          for(int i=0; i<AttractorRaycastAttempts; i++) {
+            RaycastHit hitInfo;
 
-          Vector3 startingPoint = Vector3.zero;
-          Vector3 targetPoint = Vector3.zero;
+            Vector3 startingPoint = Vector3.zero;
+            Vector3 targetPoint = Vector3.zero;
 
-          switch(attractorRaycastingType) {
-            // Inside-out raycasting
-            case AttractorRaycastingType.OUTWARDS:
-              startingPoint = new Vector3(0f,.5f,0);
-              targetPoint = UnityEngine.Random.onUnitSphere * 100f;
-              break;
+            switch(attractorRaycastingType) {
+              // Inside-out raycasting
+              case AttractorRaycastingType.OUTWARDS:
+                startingPoint = new Vector3(0f,.5f,0);
+                targetPoint = UnityEngine.Random.onUnitSphere * 100f;
+                break;
 
-            // Outside-in raycasting
-            case AttractorRaycastingType.INWARDS:
-              startingPoint = UnityEngine.Random.onUnitSphere * 100f;
-              targetPoint = UnityEngine.Random.onUnitSphere * .1f;
-              break;
+              // Outside-in raycasting
+              case AttractorRaycastingType.INWARDS:
+                startingPoint = UnityEngine.Random.onUnitSphere * 100f;
+                targetPoint = UnityEngine.Random.onUnitSphere * .1f;
+                break;
 
-            // Dome (upper hemisphere of a sphere)
-            case AttractorRaycastingType.DOME:
-              startingPoint = UnityEngine.Random.onUnitSphere * 100f;
-              targetPoint = UnityEngine.Random.onUnitSphere * .1f;
+              // Dome (upper hemisphere of a sphere)
+              case AttractorRaycastingType.DOME:
+                startingPoint = UnityEngine.Random.onUnitSphere * 100f;
+                targetPoint = UnityEngine.Random.onUnitSphere * .1f;
 
-              if(startingPoint.y < 0) {
-                continue;
-              }
+                if(startingPoint.y < 0) {
+                  continue;
+                }
 
-              break;
+                break;
+            }
+
+            bool bHit = Physics.Raycast(
+              startingPoint,
+              targetPoint,
+              out hitInfo,
+              Mathf.Infinity,
+              LayerMask.GetMask("Targets"),
+              QueryTriggerInteraction.Ignore
+            );
+
+            if(bHit) {
+              // How much distance should there be between attractor and hit surface?
+              // offset = Random.Range(.015f, .16f);
+              _attractors.Add(new Attractor(hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset)));
+
+              // Color rayColor;
+              // rayColor = Color.red;
+              // Debug.DrawLine(startingPoint, targetPoint, rayColor, 10f);
+
+              hitCount++;
+            }
           }
-
-          bool bHit = Physics.Raycast(
-            startingPoint,
-            targetPoint,
-            out hitInfo,
-            Mathf.Infinity,
-            LayerMask.GetMask("Targets"),
-            QueryTriggerInteraction.Ignore
-          );
-
-          if(bHit) {
-            // How much distance should there be between attractor and hit surface?
-            // offset = Random.Range(.015f, .16f);
-            _attractors.Add(new Attractor(hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset)));
-
-            // Color rayColor;
-            // rayColor = Color.red;
-            // Debug.DrawLine(startingPoint, targetPoint, rayColor, 10f);
-
-            hitCount++;
-          }
+        } else {
+          Debug.LogError("Target mesh must be provided to generator attractors.");
         }
 
         // Debug.Log(hitCount + " hits");
 
         Profiler.EndSample();
+      }
+
+      public void ClearAttractors() {
+        _attractors.Clear();
       }
 
 
@@ -332,6 +342,8 @@ public class GrowthManager : MonoBehaviour {
                 MinimumRadius
               )
             );
+          } else {
+            Debug.LogError("Input root node must be provided.");
           }
 
           break;
@@ -368,6 +380,8 @@ public class GrowthManager : MonoBehaviour {
                 }
               } while(!isHit);
             }
+          } else {
+            Debug.LogError("Target mesh must be provided to generate root nodes.");
           }
 
           break;
@@ -387,7 +401,7 @@ public class GrowthManager : MonoBehaviour {
     MAIN PROGRAM LOOP
   ========================
   */
-  void Update() {
+  public void Update() {
     // Automatically pause when max iterations reached (if enabled)
     if(EnableMaxIterations && _numIterations > MaxIterations) {
       isPaused = true;
@@ -480,36 +494,40 @@ public class GrowthManager : MonoBehaviour {
           bool isInsideBounds = EnableBounds ? false : true;
 
           if(EnableBounds) {
-            // Cast a ray from the new node's position to the center of the bounds mesh
-            hits = Physics.RaycastAll(
-              newNodePosition,  // starting point
-              (BoundingMesh.transform.position - newNodePosition).normalized,  // direction
-              (int)Mathf.Round(Vector3.Distance(newNodePosition, BoundingMesh.transform.position)),  // maximum distance
-              LayerMask.GetMask("Bounds") // layer containing colliders
-            );
+            if(BoundingMesh != null) {
+              // Cast a ray from the new node's position to the center of the bounds mesh
+              hits = Physics.RaycastAll(
+                newNodePosition,  // starting point
+                (BoundingMesh.transform.position - newNodePosition).normalized,  // direction
+                (int)Mathf.Round(Vector3.Distance(newNodePosition, BoundingMesh.transform.position)),  // maximum distance
+                LayerMask.GetMask("Bounds") // layer containing colliders
+              );
 
-            // 0 = point is inside the bounds
-            if(hits.Length == 0) {
-              isInsideBounds = true;
+              // 0 = point is inside the bounds
+              if(hits.Length == 0) {
+                isInsideBounds = true;
+              }
             }
           }
 
           // Obstacles check -----------------------------------------------------------------------------------------------
           bool isInsideAnyObstacles = false;
 
-          foreach(GameObject obstacle in Obstacles) {
-            if(obstacle.activeInHierarchy) {
-              // Cast a ray from the new node's position to the center of this obstacle mesh
-              hits = Physics.RaycastAll(
-                newNodePosition,  // starting point
-                (obstacle.transform.position - newNodePosition).normalized,   // direction
-                (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),  // maximum distance
-                LayerMask.GetMask("Obstacles")  // layer containing obstacles
-              );
+          if(EnableObstacles) {
+            foreach(GameObject obstacle in Obstacles) {
+              if(obstacle.activeInHierarchy) {
+                // Cast a ray from the new node's position to the center of this obstacle mesh
+                hits = Physics.RaycastAll(
+                  newNodePosition,  // starting point
+                  (obstacle.transform.position - newNodePosition).normalized,   // direction
+                  (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),  // maximum distance
+                  LayerMask.GetMask("Obstacles")  // layer containing obstacles
+                );
 
-              // 0 = point is inside the obstacle
-              if(hits.Length == 0) {
-                isInsideAnyObstacles = true;
+                // 0 = point is inside the obstacle
+                if(hits.Length == 0) {
+                  isInsideAnyObstacles = true;
+                }
               }
             }
           }
@@ -598,7 +616,7 @@ public class GrowthManager : MonoBehaviour {
       allMeshes.AddRange(branchMeshes);
       allMeshes.AddRange(patchMeshes);
 
-      filter.sharedMesh.CombineMeshes(allMeshes.ToArray());
+      _filter.sharedMesh.CombineMeshes(allMeshes.ToArray());
 
       Profiler.EndSample();
     }
@@ -625,19 +643,19 @@ public class GrowthManager : MonoBehaviour {
 
         // Create continuous tube meshes for each branch
         foreach(List<Vector3> branch in _branches) {
-          tube.points = new Vector3[branch.Count];
-          tube.radiuses = new float[branch.Count];
+          _tube.points = new Vector3[branch.Count];
+          _tube.radiuses = new float[branch.Count];
 
           for(int j=0; j<branch.Count; j++) {
-            tube.points[j] = branch[j];
-            tube.radiuses[j] = _branchRadii[t][j];
+            _tube.points[j] = branch[j];
+            _tube.radiuses[j] = _branchRadii[t][j];
           }
 
-          tube.ForceUpdate();
+          _tube.ForceUpdate();
 
           CombineInstance cb = new CombineInstance();
-          cb.mesh = Instantiate(tube.mesh);  // Instantiate is expensive AF - needs improvement!
-          cb.transform = tube.transform.localToWorldMatrix;
+          cb.mesh = Instantiate(_tube.mesh);  // Instantiate is expensive AF - needs improvement!
+          cb.transform = _tube.transform.localToWorldMatrix;
           combineInstances.Add(cb);
 
           t++;
@@ -706,19 +724,19 @@ public class GrowthManager : MonoBehaviour {
 
         // Create continuous tube meshes for each patch
         foreach(List<Vector3> patch in _patches) {
-          tube.points = new Vector3[patch.Count];
-          tube.radiuses = new float[patch.Count];
+          _tube.points = new Vector3[patch.Count];
+          _tube.radiuses = new float[patch.Count];
 
           for(int j=0; j<patch.Count; j++) {
-            tube.points[j] = patch[j];
-            tube.radiuses[j] = _patchRadii[t][j];
+            _tube.points[j] = patch[j];
+            _tube.radiuses[j] = _patchRadii[t][j];
           }
 
-          tube.ForceUpdate();
+          _tube.ForceUpdate();
 
           CombineInstance cb = new CombineInstance();
-          cb.mesh = Instantiate(tube.mesh);  // Instantiate is expensive AF - needs improvement!
-          cb.transform = tube.transform.localToWorldMatrix;
+          cb.mesh = Instantiate(_tube.mesh);  // Instantiate is expensive AF - needs improvement!
+          cb.transform = _tube.transform.localToWorldMatrix;
           combineInstances.Add(cb);
 
           t++;
@@ -842,14 +860,6 @@ public class GrowthManager : MonoBehaviour {
     Profiler.EndSample();
 
     return averageDirection;
-  }
-
-  public void GrowInEditor() {
-    for(int i=0; i<50; i++) {
-      Update();
-    }
-
-    // isPaused = true;
   }
 
 
@@ -980,6 +990,6 @@ public class GrowthManager : MonoBehaviour {
   }
 
   public void ExportOBJ() {
-    MeshToFile(filter);
+    MeshToFile(_filter);
   }
 }

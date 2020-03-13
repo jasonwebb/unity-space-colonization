@@ -45,6 +45,9 @@ public class GrowthManagerEditor : Editor {
   SerializedProperty enableObstaclesProp;
   SerializedProperty obstacleMeshListProp;
 
+  // Iteration limits
+  SerializedProperty iterationsToRun;
+
   public void OnEnable() {
     attractionDistanceProp = serializedObject.FindProperty("AttractionDistance");
     killDistanceProp = serializedObject.FindProperty("KillDistance");
@@ -78,6 +81,8 @@ public class GrowthManagerEditor : Editor {
 
     enableObstaclesProp = serializedObject.FindProperty("EnableObstacles");
     obstacleMeshListProp = serializedObject.FindProperty("Obstacles");
+
+    iterationsToRun = serializedObject.FindProperty("IterationsToRun");
   }
 
   public override void OnInspectorGUI() {
@@ -164,19 +169,21 @@ public class GrowthManagerEditor : Editor {
           break;
       }
 
-      attractorGizmoRadiusProp.floatValue = EditorGUILayout.FloatField("Attractor dot radius", attractorGizmoRadiusProp.floatValue);
+      attractorGizmoRadiusProp.floatValue = EditorGUILayout.FloatField("Attractor gizmo radius", attractorGizmoRadiusProp.floatValue);
 
       EditorGUILayout.Space();
       EditorGUILayout.BeginHorizontal();
 
         EditorGUILayout.PrefixLabel("Actions");
 
-        if(GUILayout.Button("Generate")) {
-          manager.ResetScene();
+        if(GUILayout.Button("Generate attractors")) {
+          manager.CreateAttractors();
+          EditorWindow.GetWindow<SceneView>().Repaint();
         }
 
         if(GUILayout.Button("Clear")) {
-          manager.ResetScene();
+          manager.ClearAttractors();
+          EditorWindow.GetWindow<SceneView>().Repaint();
         }
 
       EditorGUILayout.EndHorizontal();
@@ -253,10 +260,37 @@ public class GrowthManagerEditor : Editor {
     EditorGUILayout.Space();
 
 
+    //=======================================
+    //  Run
+    //=======================================
+    EditorGUILayout.LabelField("Run", EditorStyles.boldLabel);
+    EditorGUI.indentLevel++;
+
+      EditorGUILayout.BeginHorizontal();
+
+        EditorGUILayout.PrefixLabel("Iterations to run");
+        iterationsToRun.intValue = EditorGUILayout.IntField(iterationsToRun.intValue);
+
+        if(GUILayout.Button("Go")) {
+          for(int i=0; i<iterationsToRun.intValue; i++) {
+            manager.Update();
+          }
+        }
+
+      EditorGUILayout.EndHorizontal();
+
+    EditorGUI.indentLevel--;
+    EditorGUILayout.Space();
+    EditorGUILayout.Space();
+
     EditorGUILayout.BeginHorizontal();
 
       if(GUILayout.Button("Grow")) {
-        manager.GrowInEditor();
+        manager.Update();
+      }
+
+      if(GUILayout.Button("Reset")) {
+        manager.ResetScene();
       }
 
       if(GUILayout.Button("Export OBJ")) {
