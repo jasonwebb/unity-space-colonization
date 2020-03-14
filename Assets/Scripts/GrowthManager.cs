@@ -48,10 +48,6 @@ public class GrowthManager : MonoBehaviour {
   public enum AttractorRaycastingType {INWARDS, OUTWARDS, DOME};
   public AttractorRaycastingType attractorRaycastingType;
 
-  // Attractor age parameters
-  public int MaxAttractorAge;
-  public bool EnableAttractorAging;
-
   // Root node(s) parameters
   public enum RootNodeType {INPUT, MESH};
   public RootNodeType rootNodeType;
@@ -121,16 +117,13 @@ public class GrowthManager : MonoBehaviour {
     KillDistance = .5f;
     SegmentLength = .5f;
 
-    MaxAttractorAge = 10;
-    EnableAttractorAging = false;
-
     EnableCanalization = true;
     MinimumRadius = .005f;
     MaximumRadius = .15f;
     RadiusIncrement = .001f;
     ConstantRadius = .01f;
 
-    attractorsType = AttractorsType.MESH;
+    attractorsType = AttractorsType.GRID;
 
     GridDimensions = new Vector3(20f,20f,20f);
     GridResolution = new Vector3Int(5,5,5);
@@ -144,7 +137,7 @@ public class GrowthManager : MonoBehaviour {
     AttractorSurfaceOffset = .01f;
     AttractorGizmoRadius = .05f;
 
-    rootNodeType = RootNodeType.MESH;
+    rootNodeType = RootNodeType.INPUT;
     NumRootNodes = 3;
 
     EnableBounds = false;
@@ -581,13 +574,8 @@ public class GrowthManager : MonoBehaviour {
       _attractorsToRemove.Clear();
 
       foreach(Attractor attractor in _attractors) {
-        // Increment attractor age
-        if(attractor.age != -1) {
-          attractor.age += 1;
-        }
-
         // a. Open venation = as soon as the closest vein node enters KillDistance
-        if(attractor.isReached || (attractor.age != -1 && attractor.age > MaxAttractorAge)) {
+        if(attractor.isReached) {
           _attractorsToRemove.Add(attractor);
         }
 

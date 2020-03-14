@@ -7,7 +7,6 @@ public class Attractor {
   public List<Node> isInfluencing;
   public bool isFresh;
   public bool isReached;
-  public int age;
 
   public Attractor(Vector3 _position) {
     position = _position;
@@ -15,6 +14,5 @@ public class Attractor {
     isInfluencing = new List<Node>();
     isFresh = true;
     isReached = false;
-    age = -1;
   }
 }
