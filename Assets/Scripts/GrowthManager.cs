@@ -65,12 +65,13 @@ public class GrowthManager : MonoBehaviour {
   private RaycastHit[] hits;  // results of raycast hit-tests against bounds and obstacles
 
   public bool isPaused = false;
-  public bool isSetUp = false;
 
   public bool EnableMaxIterations;
   public float MaxIterations;
   private int _numIterations;
   public int IterationsToRun;
+
+  public string ExportFilename;
 
 
   //========================================================
@@ -149,6 +150,8 @@ public class GrowthManager : MonoBehaviour {
     MaxIterations = 10;
     _numIterations = 0;
     IterationsToRun = 10;
+
+    ExportFilename = "veins.obj";
   }
 
 
@@ -892,7 +895,7 @@ public class GrowthManager : MonoBehaviour {
   private int uvOffset = 0;
 
   string MeshToString(MeshFilter mf, Dictionary<string, ObjMaterial> materialList) {
-    Mesh m = mf.sharedMesh;
+    Mesh m = mf.mesh;
     Material[] mats = mf.GetComponent<Renderer>().sharedMaterials;
     StringBuilder sb = new StringBuilder();
 
@@ -971,7 +974,7 @@ public class GrowthManager : MonoBehaviour {
   void MeshToFile(MeshFilter mf) {
     Dictionary<string, ObjMaterial> materialList = PrepareFileWrite();
 
-    using (StreamWriter sw = new StreamWriter(Application.dataPath + "/ExportedModels/veins.obj")) {
+    using (StreamWriter sw = new StreamWriter(Application.dataPath + "/ExportedModels/" + ExportFilename)) {
       sw.Write("mtllib ./veins.mtl\n");
       sw.Write(MeshToString(mf, materialList));
     }

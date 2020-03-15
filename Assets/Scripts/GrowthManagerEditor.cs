@@ -46,7 +46,10 @@ public class GrowthManagerEditor : Editor {
   SerializedProperty obstacleMeshListProp;
 
   // Iteration limits
-  SerializedProperty iterationsToRun;
+  SerializedProperty iterationsToRunProp;
+
+  // Export
+  SerializedProperty exportFilenameProp;
 
   public void OnEnable() {
     attractionDistanceProp = serializedObject.FindProperty("AttractionDistance");
@@ -82,7 +85,9 @@ public class GrowthManagerEditor : Editor {
     enableObstaclesProp = serializedObject.FindProperty("EnableObstacles");
     obstacleMeshListProp = serializedObject.FindProperty("Obstacles");
 
-    iterationsToRun = serializedObject.FindProperty("IterationsToRun");
+    iterationsToRunProp = serializedObject.FindProperty("IterationsToRun");
+
+    exportFilenameProp = serializedObject.FindProperty("ExportFilename");
   }
 
   public override void OnInspectorGUI() {
@@ -269,10 +274,10 @@ public class GrowthManagerEditor : Editor {
       EditorGUILayout.BeginHorizontal();
 
         EditorGUILayout.PrefixLabel("Iterations to run");
-        iterationsToRun.intValue = EditorGUILayout.IntField(iterationsToRun.intValue);
+        iterationsToRunProp.intValue = EditorGUILayout.IntField(iterationsToRunProp.intValue);
 
         if(GUILayout.Button("Go")) {
-          for(int i=0; i<iterationsToRun.intValue; i++) {
+          for(int i=0; i<iterationsToRunProp.intValue; i++) {
             manager.Update();
           }
         }
@@ -285,19 +290,38 @@ public class GrowthManagerEditor : Editor {
 
     EditorGUILayout.BeginHorizontal();
 
-      if(GUILayout.Button("Grow")) {
+      if(GUILayout.Button("▶ Start", GUILayout.Height(40))) {
         manager.Update();
       }
 
-      if(GUILayout.Button("Reset")) {
+      if(GUILayout.Button("Reset", GUILayout.Height(40))) {
         manager.ResetScene();
       }
 
-      if(GUILayout.Button("Export OBJ")) {
+    EditorGUILayout.EndHorizontal();
+    EditorGUILayout.Space();
+    EditorGUILayout.Space();
+
+
+    //=======================================
+    //  Export
+    //=======================================
+    EditorGUILayout.LabelField("Export", EditorStyles.boldLabel);
+    EditorGUI.indentLevel++;
+
+    EditorGUILayout.BeginHorizontal();
+
+      EditorGUILayout.PrefixLabel("Filename");
+
+      exportFilenameProp.stringValue = EditorGUILayout.TextField(exportFilenameProp.stringValue);
+
+      if(GUILayout.Button("Export")) {
         manager.ExportOBJ();
       }
 
     EditorGUILayout.EndHorizontal();
+    EditorGUILayout.Space();
+    EditorGUILayout.Space();
 
     serializedObject.ApplyModifiedProperties();
   }
