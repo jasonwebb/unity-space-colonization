@@ -130,8 +130,8 @@ public class GrowthManager : MonoBehaviour {
     GridResolution = new Vector3Int(5,5,5);
     GridJitterAmount = 1f;
 
-    AttractorSphereRadius = 1f;
-    AttractorSphereCount = 5000;
+    AttractorSphereRadius = 10f;
+    AttractorSphereCount = 1000;
 
     AttractorRaycastAttempts = 200000;
     attractorRaycastingType = AttractorRaycastingType.INWARDS;
@@ -590,10 +590,6 @@ public class GrowthManager : MonoBehaviour {
         _attractors.Remove(attractor);
       }
 
-      if(_attractorsToRemove.Count > 0) {
-        Debug.Log(_attractors.Count);
-      }
-
       Profiler.EndSample();
     }
 
@@ -860,8 +856,6 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   public void ResetScene() {
-    Debug.Log("Reloading scene ...");
-
     // Restart iteration counter
     _numIterations = 0;
 
