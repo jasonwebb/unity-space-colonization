@@ -51,6 +51,16 @@ public class GrowthManagerEditor : Editor {
   // Export
   SerializedProperty exportFilenameProp;
 
+  // Foldouts
+  private bool showAlgorithmParameters = true;
+  private bool showBranchRendering = true;
+  private bool showAttractorGeneration = true;
+  private bool showRootNodes = true;
+  private bool showBounds = true;
+  private bool showObstacles = true;
+  private bool showRunControls = true;
+  private bool showExport = true;
+
   public void OnEnable() {
     attractionDistanceProp = serializedObject.FindProperty("AttractionDistance");
     killDistanceProp = serializedObject.FindProperty("KillDistance");
@@ -94,234 +104,255 @@ public class GrowthManagerEditor : Editor {
     serializedObject.Update();
     GrowthManager manager = (GrowthManager)target;
 
+    GUIStyle boldFoldoutLabel = new GUIStyle(EditorStyles.foldout);
+    boldFoldoutLabel.fontStyle = FontStyle.Bold;
+
     //=======================================
     //  Algorithm parameters
     //=======================================
-    EditorGUILayout.LabelField("Algorithm parameters", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showAlgorithmParameters = EditorGUILayout.Foldout(showAlgorithmParameters, "Algorithm parameters", boldFoldoutLabel);
 
-      attractionDistanceProp.floatValue = EditorGUILayout.FloatField("Attraction distance", attractionDistanceProp.floatValue);
-      killDistanceProp.floatValue = EditorGUILayout.FloatField("Kill distance", killDistanceProp.floatValue);
-      segmentLengthProp.floatValue = EditorGUILayout.FloatField("Segment length", segmentLengthProp.floatValue);
+    if(showAlgorithmParameters) {
+      EditorGUI.indentLevel++;
 
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+        attractionDistanceProp.floatValue = EditorGUILayout.FloatField("Attraction distance", attractionDistanceProp.floatValue);
+        killDistanceProp.floatValue = EditorGUILayout.FloatField("Kill distance", killDistanceProp.floatValue);
+        segmentLengthProp.floatValue = EditorGUILayout.FloatField("Segment length", segmentLengthProp.floatValue);
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
     //  Branch rendering
     //=======================================
-    EditorGUILayout.LabelField("Branch rendering", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showBranchRendering = EditorGUILayout.Foldout(showBranchRendering, "Branch rendering", boldFoldoutLabel);
 
-      materialProp.objectReferenceValue = (Material)EditorGUILayout.ObjectField("Material", materialProp.objectReferenceValue, typeof(Material), true);
+    if(showBranchRendering) {
+      EditorGUI.indentLevel++;
 
-      enableCanalizationProp.boolValue = EditorGUILayout.Toggle("Enable vein thickening", enableCanalizationProp.boolValue);
+        materialProp.objectReferenceValue = (Material)EditorGUILayout.ObjectField("Material", materialProp.objectReferenceValue, typeof(Material), true);
 
-      if(enableCanalizationProp.boolValue) {
-        minimumRadiusProp.floatValue = EditorGUILayout.FloatField("Minimum radius", minimumRadiusProp.floatValue);
-        maximumRadiusProp.floatValue = EditorGUILayout.FloatField("Maximum radius", maximumRadiusProp.floatValue);
-        radiusIncrementProp.floatValue = EditorGUILayout.FloatField("Radius increment", radiusIncrementProp.floatValue);
-      } else {
-        constantRadiusProp.floatValue = EditorGUILayout.FloatField("Radius", constantRadiusProp.floatValue);
-      }
+        enableCanalizationProp.boolValue = EditorGUILayout.Toggle("Enable vein thickening", enableCanalizationProp.boolValue);
 
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+        if(enableCanalizationProp.boolValue) {
+          minimumRadiusProp.floatValue = EditorGUILayout.FloatField("Minimum radius", minimumRadiusProp.floatValue);
+          maximumRadiusProp.floatValue = EditorGUILayout.FloatField("Maximum radius", maximumRadiusProp.floatValue);
+          radiusIncrementProp.floatValue = EditorGUILayout.FloatField("Radius increment", radiusIncrementProp.floatValue);
+        } else {
+          constantRadiusProp.floatValue = EditorGUILayout.FloatField("Radius", constantRadiusProp.floatValue);
+        }
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
     //  Attractor generation
     //=======================================
-    EditorGUILayout.LabelField("Attractor generation", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showAttractorGeneration = EditorGUILayout.Foldout(showAttractorGeneration, "Attractor generation", boldFoldoutLabel);
 
-      EditorGUILayout.BeginHorizontal();
+    if(showAttractorGeneration) {
+      EditorGUI.indentLevel++;
 
-        EditorGUILayout.PrefixLabel("Type of attractors");
-        EditorGUI.indentLevel--;
-          attractorsTypeProp.enumValueIndex = EditorGUILayout.Popup(attractorsTypeProp.enumValueIndex, attractorsTypeProp.enumDisplayNames);
-        EditorGUI.indentLevel++;
+        EditorGUILayout.BeginHorizontal();
 
-      EditorGUILayout.EndHorizontal();
+          EditorGUILayout.PrefixLabel("Type of attractors");
+          EditorGUI.indentLevel--;
+            attractorsTypeProp.enumValueIndex = EditorGUILayout.Popup(attractorsTypeProp.enumValueIndex, attractorsTypeProp.enumDisplayNames);
+          EditorGUI.indentLevel++;
 
-      switch(attractorsTypeProp.enumValueIndex) {
-        case (int)GrowthManager.AttractorsType.GRID:
-          gridDimensionsProp.vector3Value = EditorGUILayout.Vector3Field("Dimensions", gridDimensionsProp.vector3Value);
-          gridResolutionProp.vector3IntValue = EditorGUILayout.Vector3IntField("Resolution", gridResolutionProp.vector3IntValue);
-          gridJitterAmountProp.floatValue = EditorGUILayout.FloatField("Jitter amount", gridJitterAmountProp.floatValue);
-          break;
+        EditorGUILayout.EndHorizontal();
 
-        case (int)GrowthManager.AttractorsType.SPHERE:
-          attractorSphereRadiusProp.floatValue = EditorGUILayout.FloatField("Radius", attractorSphereRadiusProp.floatValue);
-          attractorSphereCountProp.intValue = EditorGUILayout.IntField("Attractor count", attractorSphereCountProp.intValue);
-          break;
+        switch(attractorsTypeProp.enumValueIndex) {
+          case (int)GrowthManager.AttractorsType.GRID:
+            gridDimensionsProp.vector3Value = EditorGUILayout.Vector3Field("Dimensions", gridDimensionsProp.vector3Value);
+            gridResolutionProp.vector3IntValue = EditorGUILayout.Vector3IntField("Resolution", gridResolutionProp.vector3IntValue);
+            gridJitterAmountProp.floatValue = EditorGUILayout.FloatField("Jitter amount", gridJitterAmountProp.floatValue);
+            break;
 
-        case (int)GrowthManager.AttractorsType.MESH:
-          targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
-          attractorRaycastAttemptsProp.intValue = EditorGUILayout.IntField("Raycast attempts", attractorRaycastAttemptsProp.intValue);
+          case (int)GrowthManager.AttractorsType.SPHERE:
+            attractorSphereRadiusProp.floatValue = EditorGUILayout.FloatField("Radius", attractorSphereRadiusProp.floatValue);
+            attractorSphereCountProp.intValue = EditorGUILayout.IntField("Attractor count", attractorSphereCountProp.intValue);
+            break;
 
-          EditorGUILayout.BeginHorizontal();
+          case (int)GrowthManager.AttractorsType.MESH:
+            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
+            attractorRaycastAttemptsProp.intValue = EditorGUILayout.IntField("Raycast attempts", attractorRaycastAttemptsProp.intValue);
 
-            EditorGUILayout.PrefixLabel("Raycasting direction");
-            EditorGUI.indentLevel--;
-              attractorRaycastingTypeProp.enumValueIndex = EditorGUILayout.Popup(attractorRaycastingTypeProp.enumValueIndex, attractorRaycastingTypeProp.enumDisplayNames);
-            EditorGUI.indentLevel++;
+            EditorGUILayout.BeginHorizontal();
 
-          EditorGUILayout.EndHorizontal();
-          break;
-      }
+              EditorGUILayout.PrefixLabel("Raycasting direction");
+              EditorGUI.indentLevel--;
+                attractorRaycastingTypeProp.enumValueIndex = EditorGUILayout.Popup(attractorRaycastingTypeProp.enumValueIndex, attractorRaycastingTypeProp.enumDisplayNames);
+              EditorGUI.indentLevel++;
 
-      attractorGizmoRadiusProp.floatValue = EditorGUILayout.FloatField("Attractor gizmo radius", attractorGizmoRadiusProp.floatValue);
+            EditorGUILayout.EndHorizontal();
+            break;
+        }
 
+        attractorGizmoRadiusProp.floatValue = EditorGUILayout.FloatField("Attractor gizmo radius", attractorGizmoRadiusProp.floatValue);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.BeginHorizontal();
+
+          EditorGUILayout.PrefixLabel("Actions");
+
+          if(GUILayout.Button("Generate attractors")) {
+            manager.CreateAttractors();
+            EditorWindow.GetWindow<SceneView>().Repaint();
+          }
+
+          if(GUILayout.Button("Clear")) {
+            manager.ClearAttractors();
+            EditorWindow.GetWindow<SceneView>().Repaint();
+          }
+
+        EditorGUILayout.EndHorizontal();
+
+      EditorGUI.indentLevel--;
       EditorGUILayout.Space();
-      EditorGUILayout.BeginHorizontal();
-
-        EditorGUILayout.PrefixLabel("Actions");
-
-        if(GUILayout.Button("Generate attractors")) {
-          manager.CreateAttractors();
-          EditorWindow.GetWindow<SceneView>().Repaint();
-        }
-
-        if(GUILayout.Button("Clear")) {
-          manager.ClearAttractors();
-          EditorWindow.GetWindow<SceneView>().Repaint();
-        }
-
-      EditorGUILayout.EndHorizontal();
-
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
-    //  Root nodes
+    //  Root node(s)
     //=======================================
-    EditorGUILayout.LabelField("Root nodes", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showRootNodes = EditorGUILayout.Foldout(showRootNodes, "Root node(s)", boldFoldoutLabel);
 
-      EditorGUILayout.BeginHorizontal();
+    if(showRootNodes) {
+      EditorGUI.indentLevel++;
 
-        EditorGUILayout.PrefixLabel("Type of root node(s)");
-        EditorGUI.indentLevel--;
-          rootNodeTypeProp.enumValueIndex = EditorGUILayout.Popup(rootNodeTypeProp.enumValueIndex, rootNodeTypeProp.enumDisplayNames);
-        EditorGUI.indentLevel++;
+        EditorGUILayout.BeginHorizontal();
 
-      EditorGUILayout.EndHorizontal();
+          EditorGUILayout.PrefixLabel("Type of root node(s)");
+          EditorGUI.indentLevel--;
+            rootNodeTypeProp.enumValueIndex = EditorGUILayout.Popup(rootNodeTypeProp.enumValueIndex, rootNodeTypeProp.enumDisplayNames);
+          EditorGUI.indentLevel++;
 
-      switch(rootNodeTypeProp.enumValueIndex) {
-        case (int)GrowthManager.RootNodeType.INPUT:
-          inputRootNodeProp.objectReferenceValue = (Transform)EditorGUILayout.ObjectField("Root node object", inputRootNodeProp.objectReferenceValue, typeof(Transform), true);
-          break;
+        EditorGUILayout.EndHorizontal();
 
-        case (int)GrowthManager.RootNodeType.MESH:
-          targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Bounding mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
-          numRootNodesProp.intValue = EditorGUILayout.IntSlider("Number of root nodes", numRootNodesProp.intValue, 1, 10);
-          break;
-      }
+        switch(rootNodeTypeProp.enumValueIndex) {
+          case (int)GrowthManager.RootNodeType.INPUT:
+            inputRootNodeProp.objectReferenceValue = (Transform)EditorGUILayout.ObjectField("Root node object", inputRootNodeProp.objectReferenceValue, typeof(Transform), true);
+            break;
 
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+          case (int)GrowthManager.RootNodeType.MESH:
+            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Bounding mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
+            numRootNodesProp.intValue = EditorGUILayout.IntSlider("Number of root nodes", numRootNodesProp.intValue, 1, 10);
+            break;
+        }
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
     //  Bounds
     //=======================================
-    EditorGUILayout.LabelField("Bounds", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showBounds = EditorGUILayout.Foldout(showBounds, "Bounds", boldFoldoutLabel);
 
-      enableBoundsProp.boolValue = EditorGUILayout.Toggle("Use bounds", enableBoundsProp.boolValue);
+    if(showBounds) {
+      EditorGUI.indentLevel++;
 
-      using(new EditorGUI.DisabledScope(enableBoundsProp.boolValue == false)) {
-        boundsMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Bounding mesh", boundsMeshProp.objectReferenceValue, typeof(GameObject), true);
-      }
+        enableBoundsProp.boolValue = EditorGUILayout.Toggle("Use bounds", enableBoundsProp.boolValue);
 
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+        using(new EditorGUI.DisabledScope(enableBoundsProp.boolValue == false)) {
+          boundsMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Bounding mesh", boundsMeshProp.objectReferenceValue, typeof(GameObject), true);
+        }
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
     //  Obstacles
     //=======================================
-    EditorGUILayout.LabelField("Obstacles", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showObstacles = EditorGUILayout.Foldout(showObstacles, "Obstacles", boldFoldoutLabel);
 
-      enableObstaclesProp.boolValue = EditorGUILayout.Toggle("Use obstacles", enableObstaclesProp.boolValue);
+    if(showObstacles) {
+      EditorGUI.indentLevel++;
 
-      using(new EditorGUI.DisabledScope(enableObstaclesProp.boolValue == false)) {
-        EditorGUI.indentLevel++;
-          EditorGUILayout.PropertyField(obstacleMeshListProp, new GUIContent("Obstacle meshes"), true);
-        EditorGUI.indentLevel--;
-      }
+        enableObstaclesProp.boolValue = EditorGUILayout.Toggle("Use obstacles", enableObstaclesProp.boolValue);
 
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+        using(new EditorGUI.DisabledScope(enableObstaclesProp.boolValue == false)) {
+          EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(obstacleMeshListProp, new GUIContent("Obstacle meshes"), true);
+          EditorGUI.indentLevel--;
+        }
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
-    //  Run
+    //  Run controls
     //=======================================
-    EditorGUILayout.LabelField("Run", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showRunControls = EditorGUILayout.Foldout(showRunControls, "Run controls", boldFoldoutLabel);
+
+    if(showRunControls) {
+      EditorGUI.indentLevel++;
+
+        iterationsToRunProp.intValue = EditorGUILayout.IntField("Iterations to run", iterationsToRunProp.intValue);
+
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
 
       EditorGUILayout.BeginHorizontal();
 
-        EditorGUILayout.PrefixLabel("Iterations to run");
-        iterationsToRunProp.intValue = EditorGUILayout.IntField(iterationsToRunProp.intValue);
+        GUIStyle buttonStyle = new GUIStyle(GUI.skin.button);
+        buttonStyle.fontSize = 16;
 
-        if(GUILayout.Button("Go")) {
+        if(GUILayout.Button("▶ Run", buttonStyle, GUILayout.Height(40))) {
           for(int i=0; i<iterationsToRunProp.intValue; i++) {
             manager.Update();
           }
         }
 
+        if(GUILayout.Button("Reset", buttonStyle, GUILayout.Height(40))) {
+          manager.ResetScene();
+        }
+
       EditorGUILayout.EndHorizontal();
-
-    EditorGUI.indentLevel--;
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
-
-    EditorGUILayout.BeginHorizontal();
-
-      if(GUILayout.Button("▶ Start", GUILayout.Height(40))) {
-        manager.Update();
-      }
-
-      if(GUILayout.Button("Reset", GUILayout.Height(40))) {
-        manager.ResetScene();
-      }
-
-    EditorGUILayout.EndHorizontal();
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
 
     //=======================================
     //  Export
     //=======================================
-    EditorGUILayout.LabelField("Export", EditorStyles.boldLabel);
-    EditorGUI.indentLevel++;
+    showExport = EditorGUILayout.Foldout(showExport, "Export", boldFoldoutLabel);
 
-    EditorGUILayout.BeginHorizontal();
+    if(showExport) {
+      EditorGUI.indentLevel++;
 
-      EditorGUILayout.PrefixLabel("Filename");
+      EditorGUILayout.BeginHorizontal();
 
-      exportFilenameProp.stringValue = EditorGUILayout.TextField(exportFilenameProp.stringValue);
+        EditorGUILayout.PrefixLabel("Filename");
 
-      if(GUILayout.Button("Export")) {
-        manager.ExportOBJ();
-      }
+        exportFilenameProp.stringValue = EditorGUILayout.TextField(exportFilenameProp.stringValue);
 
-    EditorGUILayout.EndHorizontal();
-    EditorGUILayout.Space();
-    EditorGUILayout.Space();
+        if(GUILayout.Button("Export")) {
+          manager.ExportOBJ();
+        }
+
+      EditorGUILayout.EndHorizontal();
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+    }
 
     serializedObject.ApplyModifiedProperties();
   }
