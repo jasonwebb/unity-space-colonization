@@ -161,7 +161,7 @@ public class GrowthManagerEditor : Editor {
 
         EditorGUILayout.BeginHorizontal();
 
-          EditorGUILayout.PrefixLabel("Type of attractors");
+          EditorGUILayout.PrefixLabel("Attractor placement");
           EditorGUI.indentLevel--;
             attractorsTypeProp.enumValueIndex = EditorGUILayout.Popup(attractorsTypeProp.enumValueIndex, attractorsTypeProp.enumDisplayNames);
           EditorGUI.indentLevel++;
@@ -243,7 +243,7 @@ public class GrowthManagerEditor : Editor {
             break;
 
           case (int)GrowthManager.RootNodeType.MESH:
-            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Bounding mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
+            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
             numRootNodesProp.intValue = EditorGUILayout.IntSlider("Number of root nodes", numRootNodesProp.intValue, 1, 10);
             break;
         }
@@ -316,8 +316,33 @@ public class GrowthManagerEditor : Editor {
         buttonStyle.fontSize = 16;
 
         if(GUILayout.Button("▶ Run", buttonStyle, GUILayout.Height(40))) {
-          for(int i=0; i<iterationsToRunProp.intValue; i++) {
-            manager.Update();
+          manager.Unpause();
+
+          bool attractorsReady = true,
+               rootNodesReady = true,
+               meshesReady = true;
+
+          // Check that attractors are generated
+          if(manager.GetAttractorCount() == 0) {
+            attractorsReady = manager.CreateAttractors();
+          }
+
+          // Check that root nodes are generated
+          if(manager.GetNodeCount() == 0) {
+            rootNodesReady = manager.CreateRootNodes();
+          }
+
+          // Check that meshes are set up
+          if(!manager.GetMeshesReady()) {
+            meshesReady = manager.SetupMeshes();
+          }
+
+          if(attractorsReady && rootNodesReady) {
+            manager.BuildSpatialIndex();
+
+            for(int i=0; i<iterationsToRunProp.intValue; i++) {
+              manager.Update();
+            }
           }
         }
 

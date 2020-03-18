@@ -64,14 +64,14 @@ public class GrowthManager : MonoBehaviour {
   public List<GameObject> Obstacles = new List<GameObject>();
   private RaycastHit[] hits;  // results of raycast hit-tests against bounds and obstacles
 
-  public bool isPaused = false;
-
-  public bool EnableMaxIterations;
-  public float MaxIterations;
-  private int _numIterations;
+  // Iteration limit
   public int IterationsToRun;
 
+  // Export parameters
   public string ExportFilename;
+
+  // Public state flags
+  public bool isPaused = false;
 
 
   //========================================================
@@ -146,9 +146,6 @@ public class GrowthManager : MonoBehaviour {
 
     Obstacles = new List<GameObject>();
 
-    EnableMaxIterations = false;
-    MaxIterations = 10;
-    _numIterations = 0;
     IterationsToRun = 10;
 
     ExportFilename = "veins.obj";
@@ -169,7 +166,7 @@ public class GrowthManager : MonoBehaviour {
       MESHES
     ========================
     */
-    void SetupMeshes() {
+    public bool SetupMeshes() {
       Profiler.BeginSample("SetupMeshes");
 
       // Remove all children (veins/tube) that can build up when switching between Editor and Game modes
@@ -192,6 +189,8 @@ public class GrowthManager : MonoBehaviour {
       _tube.transform.SetParent(gameObject.transform);
 
       Profiler.EndSample();
+
+      return true;
     }
 
 
@@ -200,15 +199,16 @@ public class GrowthManager : MonoBehaviour {
       ATTRACTORS
     ========================
     */
-    public void CreateAttractors() {
+    public bool CreateAttractors() {
       Profiler.BeginSample("CreateAttractors");
 
+      bool attractorsReady = false;
       _attractors.Clear();
 
       switch(attractorsType) {
         // Create attractors on target mesh(es) using raycasting ------------------------------------
         case AttractorsType.MESH:
-          CreateAttractorsOnMeshSurface();
+          attractorsReady = CreateAttractorsOnMeshSurface();
           break;
 
         // Points in a 3D grid ----------------------------------------------------------------------
@@ -229,6 +229,8 @@ public class GrowthManager : MonoBehaviour {
             }
           }
 
+          attractorsReady = true;
+
           break;
 
         // Points in a sphere ----------------------------------------------------------------------
@@ -237,14 +239,20 @@ public class GrowthManager : MonoBehaviour {
             _attractors.Add(new Attractor(UnityEngine.Random.insideUnitSphere * AttractorSphereRadius));
           }
 
+          attractorsReady = true;
+
           break;
       }
 
       Profiler.EndSample();
+
+      return attractorsReady;
     }
 
-      public void CreateAttractorsOnMeshSurface() {
+      public bool CreateAttractorsOnMeshSurface() {
         Profiler.BeginSample("CreateAttractorsOnMeshSurface");
+
+        bool attractorsReady = false;
 
         if(TargetMesh != null) {
           int hitCount = 0;
@@ -301,13 +309,15 @@ public class GrowthManager : MonoBehaviour {
               hitCount++;
             }
           }
+
+          attractorsReady = true;
         } else {
           Debug.LogError("Target mesh must be provided to generator attractors.");
         }
 
-        // Debug.Log(hitCount + " hits");
-
         Profiler.EndSample();
+
+        return attractorsReady;
       }
 
       public void ClearAttractors() {
@@ -317,12 +327,13 @@ public class GrowthManager : MonoBehaviour {
 
     /*
     ========================
-      ROOT VEINS
+      ROOT NODES
     ========================
     */
-    void CreateRootVeins() {
-      Profiler.BeginSample("CreateRootVeins");
+    public bool CreateRootNodes() {
+      Profiler.BeginSample("CreateRootNodes");
 
+      bool rootNodesReady = false;
       _nodes.Clear();
       _rootNodes.Clear();
 
@@ -338,6 +349,8 @@ public class GrowthManager : MonoBehaviour {
                 MinimumRadius
               )
             );
+
+            rootNodesReady = true;
           } else {
             Debug.LogError("Input root node must be provided.");
           }
@@ -376,6 +389,8 @@ public class GrowthManager : MonoBehaviour {
                 }
               } while(!isHit);
             }
+
+            rootNodesReady = true;
           } else {
             Debug.LogError("Target mesh must be provided to generate root nodes.");
           }
@@ -389,6 +404,8 @@ public class GrowthManager : MonoBehaviour {
       }
 
       Profiler.EndSample();
+
+      return rootNodesReady;
     }
 
 
@@ -398,19 +415,13 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   public void Update() {
-    // Automatically pause when max iterations reached (if enabled)
-    if(EnableMaxIterations && _numIterations > MaxIterations) {
-      isPaused = true;
-
     // Toggle pause on "space"
-    } else if(Input.GetKeyUp("space")) {
-      isPaused = !isPaused;
-    }
+    if(Input.GetKeyUp("space")) { isPaused = !isPaused; }
 
     // Reload the scene when "r" is pressed
     if(Input.GetKeyUp("r")) { ResetScene(); }
 
-    // Stop iterations when paused
+    // Stop iterating when paused or if there are no attractors
     if(isPaused) { return; }
 
     // Reset lists of attractors that vein nodes were attracted to last cycle
@@ -432,8 +443,6 @@ public class GrowthManager : MonoBehaviour {
 
     // 5. Generate tube meshes to render the vein network ==================================================================
     CreateMeshes();
-
-    _numIterations++;
   }
 
     void AssociateAttractors() {
@@ -808,7 +817,7 @@ public class GrowthManager : MonoBehaviour {
     SPATIAL INDEX
   ========================
   */
-  private void BuildSpatialIndex() {
+  public void BuildSpatialIndex() {
     Profiler.BeginSample("BuildSpatialIndex");
 
     // Create spatial index using _nodePositions
@@ -849,6 +858,20 @@ public class GrowthManager : MonoBehaviour {
     return averageDirection;
   }
 
+  public int GetAttractorCount() {
+    return _attractors.Count;
+  }
+
+  public int GetNodeCount() {
+    return _nodes.Count;
+  }
+
+  public bool GetMeshesReady() {
+    return _veinsMesh ? true : false &&
+           _tube ? true : false &&
+           _filter ? true : false;
+  }
+
 
   /*
   ========================
@@ -856,13 +879,10 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   public void ResetScene() {
-    // Restart iteration counter
-    _numIterations = 0;
-
     // Reset nodes
     _nodes.Clear();
     _rootNodes.Clear();
-    CreateRootVeins();
+    CreateRootNodes();
     BuildSpatialIndex();
 
     // Reset and generate new attractors
@@ -872,6 +892,15 @@ public class GrowthManager : MonoBehaviour {
     SetupMeshes();
     CreateMeshes();
   }
+
+    public void Pause() {
+      isPaused = true;
+    }
+
+    public void Unpause() {
+      isPaused = false;
+    }
+
 
   /*
   =====================
