@@ -505,13 +505,10 @@ public class GrowthManager : MonoBehaviour {
           // Add a random jitter to reduce split sources
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
-          // Bounds check --------------------------------------------------------------------------------------------------
-          bool isInsideBounds = EnableBounds ? IsInsideBounds(newNodePosition) : true;
-
-          // Obstacles check -----------------------------------------------------------------------------------------------
-          bool isInsideAnyObstacles = EnableObstacles ? IsInsideAnyObstacle(newNodePosition) : false;
-
-          if(isInsideBounds && !isInsideAnyObstacles) {
+          if(
+            (EnableBounds && IsInsideBounds(attractorPosition)) &&
+            (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
+          ) {
             // Since this vein node is spawning a new one, it is no longer a tip
             node.isTip = false;
 
