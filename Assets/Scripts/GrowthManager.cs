@@ -222,7 +222,10 @@ public class GrowthManager : MonoBehaviour {
                   z * (GridDimensions.z/GridResolution.z) - GridDimensions.z/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
                 );
 
-                if(IsInsideBounds(attractorPosition)) {
+                if(
+                  (EnableBounds && IsInsideBounds(attractorPosition)) &&
+                  (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
+                ) {
                   _attractors.Add(new Attractor(attractorPosition));
                 }
               }
@@ -238,7 +241,10 @@ public class GrowthManager : MonoBehaviour {
           for (int i = 0; i < AttractorSphereCount; i++) {
             Vector3 attractorPosition = UnityEngine.Random.insideUnitSphere * AttractorSphereRadius;
 
-            if(IsInsideBounds(attractorPosition)) {
+            if(
+              (EnableBounds && IsInsideBounds(attractorPosition)) &&
+              (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
+            ) {
               _attractors.Add(new Attractor(attractorPosition));
             }
           }
@@ -304,7 +310,10 @@ public class GrowthManager : MonoBehaviour {
             if(bHit) {
               Vector3 attractorPosition = hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset);
 
-              if(IsInsideBounds(attractorPosition)) {
+              if(
+                (EnableBounds && IsInsideBounds(attractorPosition)) &&
+                (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
+              ) {
                 _attractors.Add(new Attractor(attractorPosition));
                 hitCount++;
               }
