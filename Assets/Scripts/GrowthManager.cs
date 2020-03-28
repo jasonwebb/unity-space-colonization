@@ -506,8 +506,8 @@ public class GrowthManager : MonoBehaviour {
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
           if(
-            (EnableBounds && IsInsideBounds(attractorPosition)) &&
-            (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
+            (EnableBounds && IsInsideBounds(newNodePosition)) &&
+            (EnableObstacles && !IsInsideAnyObstacle(newNodePosition))
           ) {
             // Since this vein node is spawning a new one, it is no longer a tip
             node.isTip = false;
