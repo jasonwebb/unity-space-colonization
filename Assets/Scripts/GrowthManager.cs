@@ -216,15 +216,15 @@ public class GrowthManager : MonoBehaviour {
           for(int x = 0; x <= GridResolution.x; x++) {
             for(int y = 0; y <= GridResolution.y; y++) {
               for(int z = 0; z <= GridResolution.z; z++) {
-                _attractors.Add(
-                  new Attractor(
-                    new Vector3(
-                      x * (GridDimensions.x/GridResolution.x) - GridDimensions.x/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
-                      y * (GridDimensions.y/GridResolution.y) - GridDimensions.y/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
-                      z * (GridDimensions.z/GridResolution.z) - GridDimensions.z/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
-                    )
-                  )
+                Vector3 attractorPosition = new Vector3(
+                  x * (GridDimensions.x/GridResolution.x) - GridDimensions.x/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                  y * (GridDimensions.y/GridResolution.y) - GridDimensions.y/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                  z * (GridDimensions.z/GridResolution.z) - GridDimensions.z/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
                 );
+
+                if(IsInsideBounds(attractorPosition)) {
+                  _attractors.Add(new Attractor(attractorPosition));
+                }
               }
             }
           }
@@ -236,7 +236,11 @@ public class GrowthManager : MonoBehaviour {
         // Points in a sphere ----------------------------------------------------------------------
         case AttractorsType.SPHERE:
           for (int i = 0; i < AttractorSphereCount; i++) {
-            _attractors.Add(new Attractor(UnityEngine.Random.insideUnitSphere * AttractorSphereRadius));
+            Vector3 attractorPosition = UnityEngine.Random.insideUnitSphere * AttractorSphereRadius;
+
+            if(IsInsideBounds(attractorPosition)) {
+              _attractors.Add(new Attractor(attractorPosition));
+            }
           }
 
           attractorsReady = true;
@@ -298,15 +302,12 @@ public class GrowthManager : MonoBehaviour {
             );
 
             if(bHit) {
-              // How much distance should there be between attractor and hit surface?
-              // offset = Random.Range(.015f, .16f);
-              _attractors.Add(new Attractor(hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset)));
+              Vector3 attractorPosition = hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset);
 
-              // Color rayColor;
-              // rayColor = Color.red;
-              // Debug.DrawLine(startingPoint, targetPoint, rayColor, 10f);
-
-              hitCount++;
+              if(IsInsideBounds(attractorPosition)) {
+                _attractors.Add(new Attractor(attractorPosition));
+                hitCount++;
+              }
             }
           }
 
@@ -496,46 +497,10 @@ public class GrowthManager : MonoBehaviour {
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
           // Bounds check --------------------------------------------------------------------------------------------------
-          bool isInsideBounds = EnableBounds ? false : true;
-
-          if(EnableBounds) {
-            if(BoundingMesh != null) {
-              // Cast a ray from the new node's position to the center of the bounds mesh
-              hits = Physics.RaycastAll(
-                newNodePosition,  // starting point
-                (BoundingMesh.transform.position - newNodePosition).normalized,  // direction
-                (int)Mathf.Round(Vector3.Distance(newNodePosition, BoundingMesh.transform.position)),  // maximum distance
-                LayerMask.GetMask("Bounds") // layer containing colliders
-              );
-
-              // 0 = point is inside the bounds
-              if(hits.Length == 0) {
-                isInsideBounds = true;
-              }
-            }
-          }
+          bool isInsideBounds = EnableBounds ? IsInsideBounds(newNodePosition) : true;
 
           // Obstacles check -----------------------------------------------------------------------------------------------
-          bool isInsideAnyObstacles = false;
-
-          if(EnableObstacles) {
-            foreach(GameObject obstacle in Obstacles) {
-              if(obstacle.activeInHierarchy) {
-                // Cast a ray from the new node's position to the center of this obstacle mesh
-                hits = Physics.RaycastAll(
-                  newNodePosition,  // starting point
-                  (obstacle.transform.position - newNodePosition).normalized,   // direction
-                  (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),  // maximum distance
-                  LayerMask.GetMask("Obstacles")  // layer containing obstacles
-                );
-
-                // 0 = point is inside the obstacle
-                if(hits.Length == 0) {
-                  isInsideAnyObstacles = true;
-                }
-              }
-            }
-          }
+          bool isInsideAnyObstacles = EnableObstacles ? IsInsideAnyObstacle(newNodePosition) : false;
 
           if(isInsideBounds && !isInsideAnyObstacles) {
             // Since this vein node is spawning a new one, it is no longer a tip
@@ -870,6 +835,45 @@ public class GrowthManager : MonoBehaviour {
     return _veinsMesh ? true : false &&
            _tube ? true : false &&
            _filter ? true : false;
+  }
+
+  public bool IsInsideBounds(Vector3 point) {
+    bool isHit = false;
+    RaycastHit hitInfo;
+
+    isHit = Physics.Raycast(
+      point,
+      (BoundingMesh.transform.position - point).normalized,
+      out hitInfo,
+      Mathf.Infinity,
+      LayerMask.GetMask("Bounds"),
+      QueryTriggerInteraction.Ignore
+    );
+
+    return !isHit;
+  }
+
+  public bool IsInsideAnyObstacle(Vector3 point) {
+    bool isInsideObstacle = false;
+
+    foreach(GameObject obstacle in Obstacles) {
+      if(obstacle.activeInHierarchy) {
+        // Cast a ray from the test point to the center of this obstacle mesh
+        hits = Physics.RaycastAll(
+          point,  // starting point
+          (obstacle.transform.position - point).normalized,   // direction
+          (int)Mathf.Ceil(Vector3.Distance(point, obstacle.transform.position)),  // maximum distance
+          LayerMask.GetMask("Obstacles")  // layer containing obstacles
+        );
+
+        // 0 = point is inside the obstacle
+        if(hits.Length == 0) {
+          isInsideObstacle = true;
+        }
+      }
+    }
+
+    return isInsideObstacle;
   }
 
 

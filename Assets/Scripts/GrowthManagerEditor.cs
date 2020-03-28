@@ -203,6 +203,11 @@ public class GrowthManagerEditor : Editor {
           EditorGUILayout.PrefixLabel("Actions");
 
           if(GUILayout.Button("Generate attractors")) {
+            if(enableBoundsProp.boolValue && boundsMeshProp.objectReferenceValue == null) {
+              Debug.LogError("Bounding mesh must be provided when bounds are enabled.");
+              return;
+            }
+
             manager.CreateAttractors();
             EditorWindow.GetWindow<SceneView>().Repaint();
           }
