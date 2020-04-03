@@ -486,21 +486,18 @@ public class GrowthManager : MonoBehaviour {
           // Add a random jitter to reduce split sources
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
-          if(
-            (EnableBounds && IsInsideBounds(newNodePosition)) &&
-            (EnableObstacles && !IsInsideAnyObstacle(newNodePosition))
-          ) {
-            // Since this vein node is spawning a new one, it is no longer a tip
+          // Create the new node
+          Node newNode = new Node(
+            newNodePosition,
+            node,
+            true,
+            MinimumRadius
+          );
+
+          bool nodeIsValid = IsNodeValid(newNode);
+
+          if(nodeIsValid) {
             node.isTip = false;
-
-            // Create the new node
-            Node newNode = new Node(
-              newNodePosition,
-              node,
-              true,
-              MinimumRadius
-            );
-
             node.children.Add(newNode);
             _nodesToAdd.Add(newNode);
           }
@@ -510,7 +507,6 @@ public class GrowthManager : MonoBehaviour {
       // Add in the new vein nodes that have been produced
       for(int i=0; i<_nodesToAdd.Count; i++) {
         Node currentNode = _nodesToAdd[i];
-
         _nodes.Add(currentNode);
 
         // Thicken the radius of every parent Node
@@ -810,21 +806,32 @@ public class GrowthManager : MonoBehaviour {
     return averageDirection;
   }
 
-  public void AddAttractor(Vector3 position) {
-    bool passedBoundsCheck = EnableBounds ? IsInsideBounds(position) : true;
-    bool passedObstaclesCheck = EnableObstacles ? !IsInsideAnyObstacle(position) : true;
-
-    if(passedBoundsCheck && passedObstaclesCheck) {
-      _attractors.Add(new Attractor(position));
-    }
-  }
-
   public int GetAttractorCount() {
     return _attractors.Count;
   }
 
   public int GetNodeCount() {
     return _nodes.Count;
+  }
+
+  public bool AddAttractor(Vector3 position) {
+    bool passedBoundsCheck = EnableBounds ? IsInsideBounds(position) : true;
+    bool passedObstaclesCheck = EnableObstacles ? !IsInsideAnyObstacle(position) : true;
+    bool success = false;
+
+    if(passedBoundsCheck && passedObstaclesCheck) {
+      _attractors.Add(new Attractor(position));
+      success = true;
+    }
+
+    return success;
+  }
+
+  public bool IsNodeValid(Node node) {
+    bool passedBoundsCheck = EnableBounds ? IsInsideBounds(node.position) : true;
+    bool passedObstaclesCheck = EnableObstacles ? !IsInsideAnyObstacle(node.position) : true;
+
+    return passedBoundsCheck && passedObstaclesCheck;
   }
 
   public bool GetMeshesReady() {
