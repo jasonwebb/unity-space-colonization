@@ -222,12 +222,7 @@ public class GrowthManager : MonoBehaviour {
                   z * (GridDimensions.z/GridResolution.z) - GridDimensions.z/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
                 );
 
-                if(
-                  (EnableBounds && IsInsideBounds(attractorPosition)) &&
-                  (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
-                ) {
-                  _attractors.Add(new Attractor(attractorPosition));
-                }
+                AddAttractor(attractorPosition);
               }
             }
           }
@@ -239,14 +234,7 @@ public class GrowthManager : MonoBehaviour {
         // Points in a sphere ----------------------------------------------------------------------
         case AttractorsType.SPHERE:
           for (int i = 0; i < AttractorSphereCount; i++) {
-            Vector3 attractorPosition = UnityEngine.Random.insideUnitSphere * AttractorSphereRadius;
-
-            if(
-              (EnableBounds && IsInsideBounds(attractorPosition)) &&
-              (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
-            ) {
-              _attractors.Add(new Attractor(attractorPosition));
-            }
+            AddAttractor(UnityEngine.Random.insideUnitSphere * AttractorSphereRadius);
           }
 
           attractorsReady = true;
@@ -308,15 +296,8 @@ public class GrowthManager : MonoBehaviour {
             );
 
             if(bHit) {
-              Vector3 attractorPosition = hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset);
-
-              if(
-                (EnableBounds && IsInsideBounds(attractorPosition)) &&
-                (EnableObstacles && !IsInsideAnyObstacle(attractorPosition))
-              ) {
-                _attractors.Add(new Attractor(attractorPosition));
-                hitCount++;
-              }
+              AddAttractor(hitInfo.point + (hitInfo.normal * AttractorSurfaceOffset));
+              hitCount++;
             }
           }
 
@@ -827,6 +808,15 @@ public class GrowthManager : MonoBehaviour {
     Profiler.EndSample();
 
     return averageDirection;
+  }
+
+  public void AddAttractor(Vector3 position) {
+    bool passedBoundsCheck = EnableBounds ? IsInsideBounds(position) : true;
+    bool passedObstaclesCheck = EnableObstacles ? !IsInsideAnyObstacle(position) : true;
+
+    if(passedBoundsCheck && passedObstaclesCheck) {
+      _attractors.Add(new Attractor(position));
+    }
   }
 
   public int GetAttractorCount() {
