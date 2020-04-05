@@ -26,7 +26,7 @@ public class GrowthManagerEditor : Editor {
   SerializedProperty gridJitterAmountProp;
   SerializedProperty attractorSphereCountProp;
   SerializedProperty attractorSphereRadiusProp;
-  SerializedProperty targetMeshProp;
+  SerializedProperty attractorTargetMeshProp;
   SerializedProperty attractorRaycastingTypeProp;
   SerializedProperty attractorRaycastAttemptsProp;
   SerializedProperty attractorSurfaceOffsetProp;
@@ -36,6 +36,7 @@ public class GrowthManagerEditor : Editor {
   SerializedProperty rootNodeTypeProp;
   SerializedProperty inputRootNodeProp;
   SerializedProperty numRootNodesProp;
+  SerializedProperty rootNodeTargetMeshProp;
 
   // Bounding mesh
   SerializedProperty enableBoundsProp;
@@ -79,7 +80,7 @@ public class GrowthManagerEditor : Editor {
     gridJitterAmountProp = serializedObject.FindProperty("GridJitterAmount");
     attractorSphereCountProp = serializedObject.FindProperty("AttractorSphereCount");
     attractorSphereRadiusProp = serializedObject.FindProperty("AttractorSphereRadius");
-    targetMeshProp = serializedObject.FindProperty("TargetMesh");
+    attractorTargetMeshProp = serializedObject.FindProperty("AttractorTargetMesh");
     attractorRaycastingTypeProp = serializedObject.FindProperty("attractorRaycastingType");
     attractorRaycastAttemptsProp = serializedObject.FindProperty("AttractorRaycastAttempts");
     attractorSurfaceOffsetProp = serializedObject.FindProperty("AttractorSurfaceOffset");
@@ -88,6 +89,7 @@ public class GrowthManagerEditor : Editor {
     rootNodeTypeProp = serializedObject.FindProperty("rootNodeType");
     inputRootNodeProp = serializedObject.FindProperty("InputRootNode");
     numRootNodesProp = serializedObject.FindProperty("NumRootNodes");
+    rootNodeTargetMeshProp = serializedObject.FindProperty("RootNodeTargetMesh");
 
     enableBoundsProp = serializedObject.FindProperty("EnableBounds");
     boundsMeshProp = serializedObject.FindProperty("BoundingMesh");
@@ -181,7 +183,7 @@ public class GrowthManagerEditor : Editor {
             break;
 
           case (int)GrowthManager.AttractorsType.MESH:
-            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
+            attractorTargetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", attractorTargetMeshProp.objectReferenceValue, typeof(GameObject), true);
             attractorRaycastAttemptsProp.intValue = EditorGUILayout.IntField("Raycast attempts", attractorRaycastAttemptsProp.intValue);
 
             EditorGUILayout.BeginHorizontal();
@@ -203,9 +205,8 @@ public class GrowthManagerEditor : Editor {
           EditorGUILayout.PrefixLabel("Actions");
 
           if(GUILayout.Button("Generate attractors")) {
-            if(enableBoundsProp.boolValue && boundsMeshProp.objectReferenceValue == null) {
-              Debug.LogError("Bounding mesh must be provided when bounds are enabled.");
-              return;
+            if(attractorsTypeProp.enumValueIndex == (int)GrowthManager.AttractorsType.MESH) {
+              manager.SetAttractorTargetMeshLayer();
             }
 
             manager.CreateAttractors();
@@ -248,7 +249,7 @@ public class GrowthManagerEditor : Editor {
             break;
 
           case (int)GrowthManager.RootNodeType.MESH:
-            targetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", targetMeshProp.objectReferenceValue, typeof(GameObject), true);
+            rootNodeTargetMeshProp.objectReferenceValue = (GameObject)EditorGUILayout.ObjectField("Target mesh", rootNodeTargetMeshProp.objectReferenceValue, typeof(GameObject), true);
             numRootNodesProp.intValue = EditorGUILayout.IntSlider("Number of root nodes", numRootNodesProp.intValue, 1, 10);
             break;
         }
@@ -327,17 +328,20 @@ public class GrowthManagerEditor : Editor {
                rootNodesReady = true,
                meshesReady = true;
 
-          // Check that attractors are generated
+          // Assign all assigned meshes to appropriate layers
+          manager.SetAllMeshLayers();
+
+          // Make sure attractors have been generated
           if(manager.GetAttractorCount() == 0) {
             attractorsReady = manager.CreateAttractors();
           }
 
-          // Check that root nodes are generated
+          // Make sure that root nodes have been generated
           if(manager.GetNodeCount() == 0) {
             rootNodesReady = manager.CreateRootNodes();
           }
 
-          // Check that meshes are set up
+          // Make sure the meshes have been set up
           if(!manager.GetMeshesReady()) {
             meshesReady = manager.SetupMeshes();
           }

@@ -38,7 +38,7 @@ public class GrowthManager : MonoBehaviour {
     public int AttractorSphereCount;
 
     // MESH
-    public GameObject TargetMesh;
+    public GameObject AttractorTargetMesh;
 
   // Attractor generation parameters
   public int AttractorRaycastAttempts;
@@ -54,6 +54,7 @@ public class GrowthManager : MonoBehaviour {
 
   public Transform InputRootNode;
   public int NumRootNodes;
+  public GameObject RootNodeTargetMesh;
 
   // Bounds parameters
   public GameObject BoundingMesh;
@@ -252,7 +253,7 @@ public class GrowthManager : MonoBehaviour {
 
         bool attractorsReady = false;
 
-        if(TargetMesh != null) {
+        if(AttractorTargetMesh != null) {
           int hitCount = 0;
 
           for(int i=0; i<AttractorRaycastAttempts; i++) {
@@ -291,7 +292,7 @@ public class GrowthManager : MonoBehaviour {
               targetPoint,
               out hitInfo,
               Mathf.Infinity,
-              LayerMask.GetMask("Targets"),
+              LayerMask.GetMask("AttractorTargets"),
               QueryTriggerInteraction.Ignore
             );
 
@@ -350,7 +351,7 @@ public class GrowthManager : MonoBehaviour {
 
         // Random point(s) on mesh ----------------------------------------------------------------
         case RootNodeType.MESH:
-          if(TargetMesh != null) {
+          if(RootNodeTargetMesh != null) {
             bool isHit = false;
             RaycastHit hitInfo;
 
@@ -364,7 +365,7 @@ public class GrowthManager : MonoBehaviour {
                   targetPoint,
                   out hitInfo,
                   Mathf.Infinity,
-                  LayerMask.GetMask("Targets"),
+                  LayerMask.GetMask("RootNodeTargets"),
                   QueryTriggerInteraction.Ignore
                 );
 
@@ -878,6 +879,42 @@ public class GrowthManager : MonoBehaviour {
 
     return isInsideObstacle;
   }
+
+  public void SetAllMeshLayers() {
+    if(EnableBounds && BoundingMesh != null) {
+      SetBoundingMeshLayer();
+    }
+
+    if(EnableObstacles && Obstacles.Count > 0) {
+      SetObstacleMeshesLayer();
+    }
+
+    if(attractorsType == AttractorsType.MESH && AttractorTargetMesh != null) {
+      SetAttractorTargetMeshLayer();
+    }
+
+    if(rootNodeType == RootNodeType.MESH && RootNodeTargetMesh != null) {
+      SetRootNodeTargetMeshLayer();
+    }
+  }
+
+    public void SetBoundingMeshLayer() {
+      BoundingMesh.layer = LayerMask.NameToLayer("Bounds");
+    }
+
+    public void SetObstacleMeshesLayer() {
+      foreach(GameObject obstacle in Obstacles) {
+        obstacle.layer = LayerMask.NameToLayer("Obstacles");
+      }
+    }
+
+    public void SetAttractorTargetMeshLayer() {
+      AttractorTargetMesh.layer = LayerMask.NameToLayer("AttractorTargets");
+    }
+
+    public void SetRootNodeTargetMeshLayer() {
+      RootNodeTargetMesh.layer = LayerMask.NameToLayer("RootNodeTargets");
+    }
 
 
   /*

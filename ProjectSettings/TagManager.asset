@@ -16,8 +16,8 @@ TagManager:
   - PostProcessing
   - Bounds
   - Obstacles
-  - Targets
-  - 
+  - AttractorTargets
+  - RootNodeTargets
   - 
   - 
   - 
